@@ -2,7 +2,8 @@ full <- read.csv("scrna_ather_g4_count_tmm.csv")
 counts <- t(full[,2:ncol(full)])
 rownames(counts) <- sapply(strsplit(rownames(counts), split = '_'), '[', 1)
 colnames(counts) <- as.character(full[,1])
-counts <- scale(counts)
+counts <- counts - rowMeans(counts)
+counts <- round(counts,3)
 
 bcode_info <- readxl::read_xlsx("42255_2019_102_MOESM5_ESM.xlsx",skip=3) %>% 
   mutate(VAE_ClusterLabel = factor(VAE_ClusterLabel))

@@ -69,8 +69,10 @@ ui <- navbarPage("Explore the single-cell data...",
          checkboxInput("exclude_NA","Exclude Missing Values",value=TRUE),
          checkboxInput("flip_axis","Rotate Axis?",value=FALSE),
          checkboxGroupInput(inputId = "plot_type",label="Type of Plot", choices=c("Boxplot","Points","Violin","Beeswarm"),selected="Boxplot"),
-         selectInput("boxplotTheme", "Pick a plot style",choices=c("bw","grey","classic","minimal","light","Wall Street Journal","Economist", "Excel","solarized","stata","calc","dark","fivethirtyeight","tufte"),selected="bw"),
-         selectInput("pal_name", "Choose a colour palette", choices = c("UOS","Set1","Set2","Set3","Pastel1","Pastel2","Paired","Dark2","Accent"),selected="UOS")
+        selectInput(inputId = "selected_clus",label="Select Clusters to Compare",0:17, multiple = TRUE,selectize = TRUE,selected=c(0,1,3:5,7:15,17)),
+        checkboxInput("include_type","Include Cell Type", value=TRUE)
+        # selectInput("boxplotTheme", "Pick a plot style",choices=c("bw","grey","classic","minimal","light","Wall Street Journal","Economist", "Excel","solarized","stata","calc","dark","fivethirtyeight","tufte"),selected="bw"),
+        # selectInput("pal_name", "Choose a colour palette", choices = c("UOS","Set1","Set2","Set3","Pastel1","Pastel2","Paired","Dark2","Accent"),selected="UOS")
       ),
       
       # Show a plot of the generated distribution
@@ -108,14 +110,34 @@ server <- function(input, output) {
   data <-  data.frame(counts) %>% tibble::rownames_to_column("ensembl_gene_id") %>% 
     filter(ensembl_gene_id %in% sel_genes) %>% 
     tidyr::gather("FeatureID","Expression",-ensembl_gene_id) %>% 
-    left_join(bcode_info) %>% left_join(anno)
-  
+    left_join(bcode_info) %>% left_join(anno) %>% 
+    filter(VAE_ClusterLabel %in% as.numeric(input$selected_clus))
 
       p <- data %>% 
-      ggplot(aes(x=VAE_ClusterLabel,y=Expression,fill=factor(VAE_ClusterLabel),group=VAE_ClusterLabel))
+      ggplot(aes(x=VAE_ClusterLabel,y=Expression,fill=factor(VAE_ClusterLabel),group=VAE_ClusterLabel)) + 
+        scale_fill_manual(values= c("0"=rgb(3,4,4,maxColorValue = 255),#0
+                                    "1"=rgb(242,235,15, maxColorValue = 255),#1
+                                    "2"=rgb(89,202,233,maxColorValue = 255),#2
+                                    "3"=rgb(186,80,153,maxColorValue = 255),#3
+                                    "4"=rgb(253,40,58,maxColorValue = 255),#4
+                                    "5"=rgb(7,123,55,maxColorValue = 255),#5
+                                    "6"=rgb(26,87,131,maxColorValue = 255),#6
+                                    "7"=rgb(154,22,73,maxColorValue = 255),#7
+                                    "8"=rgb(249,209,221,maxColorValue = 255),#8
+                                    "9"=rgb(113,58,15,maxColorValue = 255),#9
+                                    "10"=rgb(45,52,160,maxColorValue = 255),#10
+                                    "11"=rgb(121,203,127,maxColorValue = 255),#11
+                                    "12"=rgb(173,135,68,maxColorValue = 255),#12
+                                    "13"=rgb(2,60,43,maxColorValue = 255),#13
+                                    "14"=rgb(129, 147, 209, maxColorValue = 255),#14
+                                    "15"=rgb(128, 98,106, maxColorValue = 255),#15
+                                    "16"=rgb(64,19,16,maxColorValue = 255),#16
+                                    "17"=rgb(109,137,134,maxColorValue = 255))#17
+                          )
     
-      p <- p + facet_wrap(~mgi_symbol,scales="free_y")
-  
+      if(input$include_type) {
+        p <- p + facet_wrap(mgi_symbol~MouseGenotype,ncol=4) + ylim(-5,5)
+      } else p <- p + facet_wrap(~mgi_symbol) + ylim(-5,5)
   
   
   if("Boxplot" %in% input$plot_type) p <- p + geom_boxplot(alpha=0.6)
@@ -125,29 +147,10 @@ server <- function(input, output) {
   
   if(input$flip_axis) p <- p + coord_flip()
               
-  theme <- input$boxplotTheme
-  
-  p <- switch(theme,
-               grey = p + theme_grey(),
-               bw = p + theme_bw(),
-               classic = p + theme_classic(),
-               minimal = p + theme_minimal(),
-               light = p + theme_light(),
-               "Wall Street Journal" = p+theme_wsj(),
-               Economist = p + theme_economist(),
-               Excel = p + theme_excel(),
-               solarized = p + theme_solarized(),
-               stata = p + theme_stata(),
-               calc = p + theme_calc(),
-               dark = p + theme_dark(),
-               fivethirtyeight = p + theme_fivethirtyeight(),
-               tufte = p + theme_tufte()
-               
-  )
-  
-  if(input$pal_name != "UOS") p <- p + scale_fill_brewer(palette = input$pal_name)
-  
+
+      
   p
+  
   
    })
    
@@ -170,7 +173,7 @@ server <- function(input, output) {
      
      
      p <- data %>% 
-       ggplot(aes(x=UMAP_1,y=UMAP_2,col=Expression)) + geom_point(alpha=0.4)
+       ggplot(aes(x=UMAP_1,y=UMAP_2,col=Expression)) + geom_point(alpha=0.4) + scale_color_distiller(palette = "RdBu")
      
      p <- p + facet_wrap(~mgi_symbol)
      p
