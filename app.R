@@ -33,7 +33,7 @@ ui <- navbarPage("Explore the single-cell data...",
         selectInput(inputId = "selected_clus",label="Select Clusters to Compare",0:17, multiple = TRUE,selectize = TRUE,selected=c(0,1,3:5,7:15,17)),
         selectInput("umap_type","Color UMAP by...",choices=c("expression","cluster"),selected = "expresesion"),
         checkboxInput("include_type","Include Cell Type", value=TRUE),
-        selectInput("cell_types", "Choose Cell Types...",choices = unique(bcode_info$MouseGenotype),selected = unique(bcode_info$MouseGenotype), selectize = TRUE,multiple = TRUE)
+        selectInput("cell_types", "Choose Cell Types...",choices = unique(bcode_info$Cell.Group),selected = unique(bcode_info$Cell.Group), selectize = TRUE,multiple = TRUE)
         # selectInput("boxplotTheme", "Pick a plot style",choices=c("bw","grey","classic","minimal","light","Wall Street Journal","Economist", "Excel","solarized","stata","calc","dark","fivethirtyeight","tufte"),selected="bw"),
         # selectInput("pal_name", "Choose a colour palette", choices = c("UOS","Set1","Set2","Set3","Pastel1","Pastel2","Paired","Dark2","Accent"),selected="UOS")
       ),
@@ -75,13 +75,13 @@ server <- function(input, output) {
   
   data <-  data.frame(counts) %>% tibble::rownames_to_column("ensembl_gene_id") %>% 
     filter(ensembl_gene_id %in% sel_genes) %>% 
-    tidyr::gather("FeatureID","Expression",-ensembl_gene_id) %>% 
+    tidyr::gather("Cell.ID","Expression",-ensembl_gene_id) %>% 
     left_join(bcode_info) %>% left_join(anno) %>% 
-    filter(VAE_ClusterLabel %in% as.numeric(input$selected_clus)) %>% 
-    filter(MouseGenotype %in% input$cell_types)
+    filter(Cell.ClusterLabel %in% as.numeric(input$selected_clus)) %>% 
+    filter(Cell.Group %in% input$cell_types)
 
       p <- data %>% 
-      ggplot(aes(x=VAE_ClusterLabel,y=Expression,fill=factor(VAE_ClusterLabel),group=VAE_ClusterLabel)) + 
+      ggplot(aes(x=Cell.ClusterLabel,y=Expression,fill=factor(Cell.ClusterLabel),group=Cell.ClusterLabel)) + 
         scale_fill_manual(values= c("0"=rgb(3,4,4,maxColorValue = 255),#0
                                     "1"=rgb(242,235,15, maxColorValue = 255),#1
                                     "2"=rgb(89,202,233,maxColorValue = 255),#2
@@ -103,8 +103,8 @@ server <- function(input, output) {
                           )
     
       if(input$include_type) {
-        p <- p + facet_wrap(mgi_symbol~MouseGenotype,ncol=4) + ylim(-5,5)
-      } else p <- p + facet_wrap(~mgi_symbol) + ylim(-5,5)
+        p <- p + facet_wrap(mgi_symbol~Cell.Group,ncol=length(input$cell_types)) + ylim(-5,5)
+      } else p <- p + facet_wrap(~mgi_symbol,ncol=1) + ylim(-5,5)
   
   
   if("Boxplot" %in% input$plot_type) p <- p + geom_boxplot(alpha=0.6)
@@ -140,18 +140,19 @@ server <- function(input, output) {
      
      data <-  data.frame(counts) %>% tibble::rownames_to_column("ensembl_gene_id") %>% 
        filter(ensembl_gene_id %in% sel_genes) %>% 
-       tidyr::gather("FeatureID","Expression",-ensembl_gene_id) %>% 
+       tidyr::gather("Cell.ID","Expression",-ensembl_gene_id) %>% 
        left_join(bcode_info) %>% left_join(anno) %>% 
-       filter(MouseGenotype %in% input$cell_types)
+       filter(Cell.ClusterLabel %in% as.numeric(input$selected_clus)) %>% 
+       filter(Cell.Group %in% input$cell_types)
      
      if(input$umap_type == "expression"){
      p <- data %>% 
-       ggplot(aes(x=UMAP_1,y=UMAP_2,col=Expression)) + geom_point(alpha=0.4) + scale_color_distiller(palette = "RdBu")
+       ggplot(aes(x=UMAP.1,y=UMAP.2,col=Expression)) + geom_point(alpha=0.4) + scale_color_distiller(palette = "RdBu")
      p <- p + facet_wrap(~mgi_symbol)
      }     
      else {
        p <- data %>% 
-         ggplot(aes(x=UMAP_1,y=UMAP_2,col=factor(VAE_ClusterLabel))) + geom_point(alpha=0.4) + scale_color_manual("Cluster",values= c("0"=rgb(3,4,4,maxColorValue = 255),#0
+         ggplot(aes(x=UMAP.1,y=UMAP.2,col=factor(Cell.ClusterLabel))) + geom_point() + scale_color_manual("Cluster",values= c("0"=rgb(3,4,4,maxColorValue = 255),#0
                                                                                                                             "1"=rgb(242,235,15, maxColorValue = 255),#1,
                                                                                                                             "2"=rgb(89,202,233,maxColorValue = 255),#2
                                                                                                                             "3"=rgb(186,80,153,maxColorValue = 255),#3

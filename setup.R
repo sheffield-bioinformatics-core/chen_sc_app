@@ -5,8 +5,9 @@ colnames(counts) <- as.character(full[,1])
 counts <- counts - rowMeans(counts)
 counts <- round(counts,3)
 
-bcode_info <- readxl::read_xlsx("42255_2019_102_MOESM5_ESM.xlsx",skip=3) %>% 
-  mutate(VAE_ClusterLabel = factor(VAE_ClusterLabel))
+
+bcode_info <- readr::read_tsv("Endothelial_SampleData.txt") %>% 
+  mutate(Cell.ClusterLabel = factor(Cell.ClusterLabel))
 
 library(biomaRt)
 mart <- useMart("ENSEMBL_MART_ENSEMBL",dataset="mmusculus_gene_ensembl")
